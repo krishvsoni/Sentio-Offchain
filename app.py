@@ -1,3 +1,15 @@
+# ------------------------------------------------------------------------------
+# Sentio
+# Project: Offchain Analyzer
+# Author: Sentio Team
+# Email: connectsentio@gmail.com
+# Date Published: 2024-07-8
+# Description: This application provides a backend API for analyzing Lua
+#              code for integer overflows and potential vulnerabilities using
+#              luaparser.
+# ------------------------------------------------------------------------------
+
+
 from flask import Flask, render_template, request, jsonify
 from luaparser import ast, astnodes
 from luaparser.astnodes import *
@@ -287,24 +299,35 @@ def analyze_unchecked_external_calls(code):
     tree = ast.parse(code)
 
     def is_external_call(node):
-        return (
-            isinstance(node, astnodes.Call)
-            and isinstance(node.func, astnodes.Index)
-            and isinstance(node.func.value, astnodes.Name)
-        )
+        # Handle both simple names (Name) and indexed names (Index)
+        if isinstance(node, astnodes.Call):
+            if isinstance(node.func, astnodes.Name):
+                return node.func.id in ["external_call", "SmartWeave.call", "ao.send"]
+            elif isinstance(node.func, astnodes.Index):
+                # Handle cases like table["method"]()
+                if isinstance(node.func.value, astnodes.Name):
+                    return node.func.value.id in ["external", "contract"]
+        return False
 
     for node in ast.walk(tree):
         if isinstance(node, astnodes.Function):
+            # Get function name safely
+            func_name = "anonymous"
+            if isinstance(node.name, astnodes.Name):
+                func_name = node.name.id
+            elif isinstance(node.name, astnodes.Index):
+                # Handle cases where function name is indexed
+                func_name = str(node.name)  # Or extract specific parts as needed
+
             for n in node.body.body:
                 if is_external_call(n):
                     add_vulnerability(
                         "Unchecked External Calls",
-                        f"Unchecked external call detected in function '{node.name.id}'.",
+                        f"Unchecked external call detected in function '{func_name}'.",
                         "unchecked_external_call",
                         "medium",
                         get_line_number(n),
                     )
-
 
 def analyze_greedy_suicidal_functions(code):
     tree = ast.parse(code)
@@ -579,59 +602,179 @@ def analyze_state_reset_misuse(code):
     return vulnerabilities
 
 
-# def analyze_tag_handling_security(code):
-#     """
-#     Analyzes Lua code to detect vulnerabilities in tag handling.
-#     Specifically checks for:
-#     1. Overwriting of critical keys by tags starting with "X-".
-#     2. Lack of sanitization or validation of tags starting with "X-".
-#     """
-#     if not code.strip():
-#         raise ValueError("Lua code is empty or invalid.")
+def analyze_tag_handling_security(code):
+    """
+    Analyzes Lua code to detect vulnerabilities in tag handling.
+    Specifically checks for:
+    1. Overwriting of critical keys by tags starting with "X-".
+    2. Lack of sanitization or validation of tags starting with "X-".
+    """
+    if not code.strip():
+        raise ValueError("Lua code is empty or invalid.")
     
-#     try:
-#         tree = ast.parse(code)
-#     except luaparser.builder.SyntaxException as e:
-#         raise ValueError(f"Syntax error while parsing Lua code: {str(e)}")
+    try:
+        tree = ast.parse(code)
+    except luaparser.builder.SyntaxException as e:
+        raise ValueError(f"Syntax error while parsing Lua code: {str(e)}")
 
-#     vulnerabilities = []
+    vulnerabilities = []
 
-#     critical_keys = ["userData", "session", "config", "admin"]
+    critical_keys = ["userData", "session", "config", "admin"]
 
-#     for node in ast.walk(tree):
-#         if isinstance(node, Assign):
-#             for target in node.targets:
-#                 if isinstance(target, Index) and isinstance(target.idx, String):
-#                     tag_name = target.idx.s
-#                     if tag_name.startswith("X-"):  
-#                         if any(critical_key in tag_name for critical_key in critical_keys):
-#                             vulnerabilities.append({
-#                                 "type": "Tag Handling Security",
-#                                 "message": f"Tag '{tag_name}' starts with 'X-' and may overwrite a critical key.",
-#                                 "severity": "high",
-#                                 "line": getattr(node, "lineno", None),
-#                             })
+    for node in ast.walk(tree):
+        if isinstance(node, Assign):
+            for target in node.targets:
+                if isinstance(target, Index) and isinstance(target.idx, String):
+                    tag_name = target.idx.s
+                    if tag_name.startswith("X-"):  
+                        if any(critical_key in tag_name for critical_key in critical_keys):
+                            vulnerabilities.append({
+                                "type": "Tag Handling Security",
+                                "message": f"Tag '{tag_name}' starts with 'X-' and may overwrite a critical key.",
+                                "severity": "high",
+                                "line": getattr(node, "lineno", None),
+                            })
 
-#                         if not any(
-#                             isinstance(stmt, Call) and isinstance(stmt.func, Name) and stmt.func.id == "sanitizeTag"
-#                             for stmt in ast.walk(tree)
-#                         ):
-#                             vulnerabilities.append({
-#                                 "type": "Tag Handling Security",
-#                                 "message": f"Tag '{tag_name}' starting with 'X-' is not sanitized.",
-#                                 "severity": "high",
-#                                 "line": getattr(node, "lineno", None),
-#                             })
+                        if not any(
+                            isinstance(stmt, Call) and isinstance(stmt.func, Name) and stmt.func.id == "sanitizeTag"
+                            for stmt in ast.walk(tree)
+                        ):
+                            vulnerabilities.append({
+                                "type": "Tag Handling Security",
+                                "message": f"Tag '{tag_name}' starting with 'X-' is not sanitized.",
+                                "severity": "high",
+                                "line": getattr(node, "lineno", None),
+                            })
     
-#     return vulnerabilities
+    return vulnerabilities
+
+def analyze_arithmetic(tree):
+    """Check for overflows/underflows in token math."""
+    for node in ast.walk(tree):
+        if isinstance(node, (astnodes.AddOp, astnodes.SubOp, astnodes.MultOp)):
+            left = node.left
+            right = node.right
+            
+            # Check for literal overflows
+            if isinstance(left, astnodes.Number) and abs(left.n) > 1e18:
+                add_vulnerability(
+                    "Integer Overflow",
+                    f"Large literal number may overflow: {left.n}",
+                    "arithmetic",
+                    "high",
+                    get_line_number(left)
+                )
+            
+            # Check for division by zero
+            if isinstance(node, astnodes.DivOp) and (
+                (isinstance(right, astnodes.Number) and right.n == 0) or
+                (isinstance(right, astnodes.Name) and "balance" in right.id)
+            ):
+                add_vulnerability(
+                    "Division by Zero",
+                    "Potential division by zero in arithmetic operation.",
+                    "arithmetic",
+                    "critical",
+                    get_line_number(node)
+                )
+
+def analyze_frontrunning(tree):
+    """Check for transactions susceptible to front-running."""
+    for node in ast.walk(tree):
+        if isinstance(node, astnodes.Call) and isinstance(node.func, astnodes.Name):
+            if node.func.id in ["swap", "add_liquidity"]:
+                if not has_slippage_control(node):
+                    add_vulnerability(
+                        "Front-Running",
+                        "Missing slippage control in swap/addLiquidity.",
+                        "frontrunning",
+                        "medium",
+                        get_line_number(node)
+                    )
 
 
+def analyze_oracle_manipulation(tree):
+    """Detect unsafe price feed usage."""
+    for node in ast.walk(tree):
+        if isinstance(node, astnodes.Call) and isinstance(node.func, astnodes.Name):
+            if node.func.id in ["get_price", "calculate_value"]:
+                if not has_multiple_oracles(node):
+                    add_vulnerability(
+                        "Oracle Manipulation",
+                        "Single-point oracle usage (manipulation risk).",
+                        "oracle",
+                        "high",
+                        get_line_number(node)
+                    )
 
+def analyze_flash_loans(tree):
+    """Check for flash loan attack vectors."""
+    for node in ast.walk(tree):
+        if isinstance(node, astnodes.If):
+            if is_balance_check(node.test) and not has_reentrancy_guard(node):
+                add_vulnerability(
+                    "Flash Loan Risk",
+                    "Unprotected balance check (flash loan attack possible).",
+                    "flash_loan",
+                    "high",
+                    get_line_number(node)
+                )
+
+
+def analyze_event_logging(tree):
+    """Ensure critical actions are logged."""
+    critical_functions = ["transfer", "mint", "burn"]
+    
+    for node in ast.walk(tree):
+        if isinstance(node, astnodes.Function):
+            func_name = node.name.id if isinstance(node.name, astnodes.Name) else None
+            
+            if func_name in critical_functions:
+                if not emits_event(node):
+                    add_vulnerability(
+                        "Silent State Change",
+                        f"Critical function '{func_name}' lacks event logging.",
+                        "event_logging",
+                        "medium",
+                        get_line_number(node)
+                    )
+
+
+def find_parent_function(node):
+    """Navigate up AST to find enclosing function."""
+    while hasattr(node, "_parent"):
+        node = node._parent
+        if isinstance(node, astnodes.Function):
+            return node
+    return None
+
+def has_state_change_after(func_node, target_node):
+    """Check if state is modified after a target node."""
+    found_target = False
+    for child in ast.walk(func_node.body):
+        if child == target_node:
+            found_target = True
+        elif found_target and isinstance(child, (astnodes.Assign, astnodes.Call)):
+            return True
+    return False
+
+def has_access_control(node):
+    """Check for owner/caller checks in function."""
+    for child in ast.walk(node.body):
+        if isinstance(child, astnodes.If):
+            if "msg.sender" in ast.dump(child.test) or "owner" in ast.dump(child.test):
+                return True
+    return False
+                    
 
 def analyze_lua_code(code):
     global vulnerabilities
     vulnerabilities = []
-    # analyze_tag_handling_security(code)
+    analyze_arithmetic(code)
+    analyze_flash_loans(code)
+    analyze_oracle_manipulation(code)
+    analyze_frontrunning(code)
+    analyze_tag_handling_security(code)
     analyze_state_reset_misuse(code)
     analyze_replay_attacks(code)
     analyze_improper_balance_checks(code)
