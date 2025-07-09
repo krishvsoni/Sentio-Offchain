@@ -1,0 +1,25 @@
+{
+  "patterns": [
+    {
+      "code_snippet": "local x = 2147483647 + 1",
+      "vulnerability_type": "Integer Overflow",
+      "confidence": 0.9,
+      "metadata": {
+        "severity": "high",
+        "description": "Potential integer overflow",
+        "pattern": "",
+        "line": null,
+        "user_feedback": "Test pattern"
+      },
+      "hash": "0929039b9f2087f0348c4b121d0f7fb5",
+      "created_at": "2025-07-09T21:57:05.280505",
+      "usage_count": 0
+    }
+  ],
+  "stats": {
+    "Integer Overflow": 1
+  },
+  "feedback_history": [],
+  "last_updated": "2025-07-09T21:57:05.301771",
+  "total_patterns": 1
+}
