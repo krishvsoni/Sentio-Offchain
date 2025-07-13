@@ -1,25 +1,365 @@
 {
   "patterns": [
     {
-      "code_snippet": "local x = 2147483647 + 1",
+      "code_snippet": "local balance = 1000000000\nlocal amount = 2147483647\nlocal new_balance = balance + amount",
       "vulnerability_type": "Integer Overflow",
       "confidence": 0.9,
       "metadata": {
         "severity": "high",
-        "description": "Potential integer overflow",
-        "pattern": "",
-        "line": null,
-        "user_feedback": "Test pattern"
+        "description": "Potential integer overflow detected with arithmetic operations exceeding INT_MAX",
+        "pattern": "overflow",
+        "common_fixes": ["Add bounds checking", "Use safe math libraries", "Validate input ranges"],
+        "examples": ["if balance + amount > INT_MAX then error(\"Overflow\") end"],
+        "detection_keywords": ["AddOp", "SubOp", "MultOp", "2147483647", "large_numbers"]
       },
-      "hash": "0929039b9f2087f0348c4b121d0f7fb5",
-      "created_at": "2025-07-09T21:57:05.280505",
+      "hash": "a1b2c3d4e5f6g7h8",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "local balance = 100\nlocal amount = -2147483648\nlocal new_balance = balance + amount",
+      "vulnerability_type": "Integer Underflow",
+      "confidence": 0.9,
+      "metadata": {
+        "severity": "high",
+        "description": "Potential integer underflow detected with arithmetic operations below INT_MIN",
+        "pattern": "underflow",
+        "common_fixes": ["Add lower bounds checking", "Validate negative operations", "Use unsigned types where appropriate"],
+        "examples": ["if balance - amount < INT_MIN then error(\"Underflow\") end"],
+        "detection_keywords": ["negative_numbers", "-2147483648", "subtraction"]
+      },
+      "hash": "b2c3d4e5f6g7h8i9",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "function transfer(to, value)\n    if balance >= value then\n        call_external(to, value)\n        balance = balance - value\n    end\nend",
+      "vulnerability_type": "Reentrancy",
+      "confidence": 0.95,
+      "metadata": {
+        "severity": "high",
+        "description": "External call made before state changes, allowing reentrancy attacks",
+        "pattern": "external_call",
+        "common_fixes": ["Use checks-effects-interactions pattern", "Add reentrancy guards", "State changes before external calls"],
+        "examples": ["balance = balance - value\ncall_external(to, value)"],
+        "detection_keywords": ["external_call", "state_change_after", "call_before_update"]
+      },
+      "hash": "c3d4e5f6g7h8i9j0",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "local private_key = \"0x1234567890abcdef\"\nlocal secret_key = \"my_secret\"",
+      "vulnerability_type": "Private Key Exposure",
+      "confidence": 0.85,
+      "metadata": {
+        "severity": "high",
+        "description": "Hardcoded private keys or sensitive data detected in code",
+        "pattern": "private_key_exposure",
+        "common_fixes": ["Use environment variables", "Implement secure key management", "Remove hardcoded secrets"],
+        "examples": ["local private_key = os.getenv('PRIVATE_KEY')"],
+        "detection_keywords": ["privatekey", "private_key", "secretkey", "secret_key", "api_key"]
+      },
+      "hash": "d4e5f6g7h8i9j0k1",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "function emergency_withdraw()\n    send_all_funds(owner)\nend",
+      "vulnerability_type": "Access Control Issue",
+      "confidence": 0.8,
+      "metadata": {
+        "severity": "high",
+        "description": "Missing access control check in sensitive function",
+        "pattern": "access_control",
+        "common_fixes": ["Add owner/admin checks", "Implement role-based access", "Use modifier patterns"],
+        "examples": ["if msg.sender ~= owner then error(\"Unauthorized\") end"],
+        "detection_keywords": ["mint", "burn", "transfer", "emergency", "admin", "owner"]
+      },
+      "hash": "e5f6g7h8i9j0k1l2",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "function processMessage()\n    -- No return statement\nend",
+      "vulnerability_type": "Missing Return Statement",
+      "confidence": 0.6,
+      "metadata": {
+        "severity": "low",
+        "description": "Function is missing a return statement which may cause undefined behavior",
+        "pattern": "missing_return",
+        "common_fixes": ["Add explicit return statements", "Define return values", "Use proper function signatures"],
+        "examples": ["function processMessage()\n    -- logic\n    return true\nend"],
+        "detection_keywords": ["function", "no_return", "undefined_behavior"]
+      },
+      "hash": "f6g7h8i9j0k1l2m3",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "perform_expensive_operation()",
+      "vulnerability_type": "Denial of Service",
+      "confidence": 0.7,
+      "metadata": {
+        "severity": "medium",
+        "description": "Code patterns that can cause service unavailability through expensive operations",
+        "pattern": "denial_of_service",
+        "common_fixes": ["Add gas limits", "Implement rate limiting", "Add circuit breakers", "Optimize algorithms"],
+        "examples": ["if gas_remaining < MIN_GAS then return end"],
+        "detection_keywords": ["expensive_operation", "infinite_loop", "gas_consumption"]
+      },
+      "hash": "g7h8i9j0k1l2m3n4",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "external_call(recipient, amount)\n-- No return value check",
+      "vulnerability_type": "Unchecked External Calls",
+      "confidence": 0.8,
+      "metadata": {
+        "severity": "medium",
+        "description": "External function calls without proper error handling or return value checks",
+        "pattern": "unchecked_external_call",
+        "common_fixes": ["Add return value checks", "Implement proper error handling", "Use try-catch patterns"],
+        "examples": ["local success = external_call(recipient, amount)\nif not success then error(\"Call failed\") end"],
+        "detection_keywords": ["external_call", "SmartWeave.call", "ao.send", "unchecked"]
+      },
+      "hash": "h8i9j0k1l2m3n4o5",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "function transfer_funds()\n    transfer_all_balance()\n    -- No return statement\nend",
+      "vulnerability_type": "Greedy Function",
+      "confidence": 0.75,
+      "metadata": {
+        "severity": "high",
+        "description": "Functions that can drain resources or destroy contracts without proper safeguards",
+        "pattern": "greedy_function",
+        "common_fixes": ["Add access controls", "Implement withdrawal patterns", "Add multi-sig requirements"],
+        "examples": ["if msg.sender ~= owner then error(\"Unauthorized\") end\ntransfer_funds()"],
+        "detection_keywords": ["transfer_funds", "drain", "withdraw_all", "greedy"]
+      },
+      "hash": "i9j0k1l2m3n4o5p6",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "setfenv()\ngetfenv()",
+      "vulnerability_type": "Floating Pragma",
+      "confidence": 0.6,
+      "metadata": {
+        "severity": "low",
+        "description": "Usage of deprecated functions that may cause compatibility issues",
+        "pattern": "floating_pragma",
+        "common_fixes": ["Use modern alternatives", "Update to current Lua version", "Avoid deprecated functions"],
+        "examples": ["-- Use _ENV instead of setfenv/getfenv"],
+        "detection_keywords": ["setfenv", "getfenv", "deprecated"]
+      },
+      "hash": "j0k1l2m3n4o5p6q7",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "-- No processedMessages table\n-- No msg.Id checking",
+      "vulnerability_type": "Replay Attack",
+      "confidence": 0.9,
+      "metadata": {
+        "severity": "high",
+        "description": "Missing replay protection mechanism allowing message replay attacks",
+        "pattern": "replay_attack",
+        "common_fixes": ["Implement processed messages tracking", "Use unique message IDs", "Add timestamp validation"],
+        "examples": ["if processedMessages[msg.Id] then return end\nprocessedMessages[msg.Id] = true"],
+        "detection_keywords": ["processedMessages", "msg.Id", "replay", "nonce"]
+      },
+      "hash": "k1l2m3n4o5p6q7r8",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "ResetState = true\n-- No access control",
+      "vulnerability_type": "State Reset Misuse",
+      "confidence": 0.85,
+      "metadata": {
+        "severity": "high",
+        "description": "Unrestricted access to state reset functionality",
+        "pattern": "state_reset_misuse",
+        "common_fixes": ["Add admin access control", "Implement multi-sig for resets", "Add confirmation mechanisms"],
+        "examples": ["if not isAdmin then error(\"Unauthorized\") end\nResetState = true"],
+        "detection_keywords": ["ResetState", "resetBalances", "state_reset"]
+      },
+      "hash": "l2m3n4o5p6q7r8s9",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "tags[\"X-userData\"] = value\n-- No sanitization",
+      "vulnerability_type": "Tag Handling Security",
+      "confidence": 0.8,
+      "metadata": {
+        "severity": "high",
+        "description": "Unsafe handling of tags starting with 'X-' that may overwrite critical keys",
+        "pattern": "tag_handling_security",
+        "common_fixes": ["Sanitize tag inputs", "Validate tag names", "Restrict X- tags"],
+        "examples": ["if tag:match('^X%-') then tag = sanitizeTag(tag) end"],
+        "detection_keywords": ["X-", "tags", "overwrite", "sanitize"]
+      },
+      "hash": "m3n4o5p6q7r8s9t0",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "local result = 1000000000000000000 * 2",
+      "vulnerability_type": "Integer Overflow",
+      "confidence": 0.95,
+      "metadata": {
+        "severity": "high",
+        "description": "Large literal numbers that may cause arithmetic overflow",
+        "pattern": "arithmetic",
+        "common_fixes": ["Use arbitrary precision libraries", "Add overflow checks", "Validate number ranges"],
+        "examples": ["if num > MAX_SAFE_INTEGER then error(\"Too large\") end"],
+        "detection_keywords": ["large_numbers", "1e18", "arithmetic", "multiplication"]
+      },
+      "hash": "n4o5p6q7r8s9t0u1",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "local result = balance / 0",
+      "vulnerability_type": "Division by Zero",
+      "confidence": 0.95,
+      "metadata": {
+        "severity": "critical",
+        "description": "Division by zero causing runtime errors",
+        "pattern": "arithmetic",
+        "common_fixes": ["Add zero checks before division", "Use safe division functions", "Validate denominators"],
+        "examples": ["if denominator == 0 then error(\"Division by zero\") end"],
+        "detection_keywords": ["division", "zero", "DivOp", "/"]
+      },
+      "hash": "o5p6q7r8s9t0u1v2",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "swap(tokenA, tokenB, amount)\n-- No slippage protection",
+      "vulnerability_type": "Front-Running",
+      "confidence": 0.8,
+      "metadata": {
+        "severity": "medium",
+        "description": "DEX operations without slippage protection vulnerable to front-running",
+        "pattern": "frontrunning",
+        "common_fixes": ["Add slippage parameters", "Use commit-reveal schemes", "Implement MEV protection"],
+        "examples": ["swap(tokenA, tokenB, amount, maxSlippage)"],
+        "detection_keywords": ["swap", "add_liquidity", "slippage", "frontrun"]
+      },
+      "hash": "p6q7r8s9t0u1v2w3",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "local price = get_price(oracle)\n-- Single oracle usage",
+      "vulnerability_type": "Oracle Manipulation",
+      "confidence": 0.85,
+      "metadata": {
+        "severity": "high",
+        "description": "Single-point oracle usage susceptible to manipulation",
+        "pattern": "oracle",
+        "common_fixes": ["Use multiple oracles", "Implement price aggregation", "Add oracle validation"],
+        "examples": ["local price = (oracle1_price + oracle2_price) / 2"],
+        "detection_keywords": ["get_price", "oracle", "price_feed", "single_oracle"]
+      },
+      "hash": "q7r8s9t0u1v2w3x4",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "if balance > amount then\n    -- vulnerable to flash loans\nend",
+      "vulnerability_type": "Flash Loan Risk",
+      "confidence": 0.9,
+      "metadata": {
+        "severity": "high",
+        "description": "Balance checks without reentrancy protection vulnerable to flash loan attacks",
+        "pattern": "flash_loan",
+        "common_fixes": ["Add reentrancy guards", "Use block-based checks", "Implement flash loan protection"],
+        "examples": ["require(not inExecution, \"Reentrancy guard\")"],
+        "detection_keywords": ["balance_check", "flash_loan", "reentrancy_guard"]
+      },
+      "hash": "r8s9t0u1v2w3x4y5",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "function transfer()\n    balance = balance - amount\n    -- No event emission\nend",
+      "vulnerability_type": "Silent State Change",
+      "confidence": 0.7,
+      "metadata": {
+        "severity": "medium",
+        "description": "Critical functions that don't emit events for state changes",
+        "pattern": "event_logging",
+        "common_fixes": ["Add event emissions", "Implement logging", "Use event libraries"],
+        "examples": ["emit('Transfer', {from = sender, to = recipient, amount = amount})"],
+        "detection_keywords": ["transfer", "mint", "burn", "emit", "log", "event"]
+      },
+      "hash": "s9t0u1v2w3x4y5z6",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "add(balances[msg.from], amount)\n-- No balance validation",
+      "vulnerability_type": "Improper Balance Checks",
+      "confidence": 0.8,
+      "metadata": {
+        "severity": "high",
+        "description": "Improper balance validation in token operations",
+        "pattern": "improper_balance_check",
+        "common_fixes": ["Validate balance sufficiency", "Add overflow checks", "Use safe arithmetic"],
+        "examples": ["if balances[msg.from] < amount then error(\"Insufficient balance\") end"],
+        "detection_keywords": ["balances", "add", "subtract", "insufficient"]
+      },
+      "hash": "t0u1v2w3x4y5z6a7",
+      "created_at": "2025-07-13T00:00:00",
+      "usage_count": 0
+    },
+    {
+      "code_snippet": "local negative_amount = -100\nbalances[user] = balances[user] + negative_amount",
+      "vulnerability_type": "Negative Balances",
+      "confidence": 0.85,
+      "metadata": {
+        "severity": "medium",
+        "description": "Operations that can result in negative balances",
+        "pattern": "negative_balance",
+        "common_fixes": ["Validate non-negative amounts", "Use unsigned types", "Add balance checks"],
+        "examples": ["if amount < 0 then error(\"Amount must be positive\") end"],
+        "detection_keywords": ["negative", "balance", "subtract", "underflow"]
+      },
+      "hash": "u1v2w3x4y5z6a7b8",
+      "created_at": "2025-07-13T00:00:00",
       "usage_count": 0
     }
   ],
   "stats": {
-    "Integer Overflow": 1
+    "Integer Overflow": 2,
+    "Integer Underflow": 1,
+    "Reentrancy": 1,
+    "Private Key Exposure": 1,
+    "Access Control Issue": 1,
+    "Missing Return Statement": 1,
+    "Denial of Service": 1,
+    "Unchecked External Calls": 1,
+    "Greedy Function": 1,
+    "Floating Pragma": 1,
+    "Replay Attack": 1,
+    "State Reset Misuse": 1,
+    "Tag Handling Security": 1,
+    "Division by Zero": 1,
+    "Front-Running": 1,
+    "Oracle Manipulation": 1,
+    "Flash Loan Risk": 1,
+    "Silent State Change": 1,
+    "Improper Balance Checks": 1,
+    "Negative Balances": 1
   },
   "feedback_history": [],
-  "last_updated": "2025-07-09T21:57:05.301771",
-  "total_patterns": 1
+  "last_updated": "2025-07-13T12:00:00",
+  "total_patterns": 21
 }

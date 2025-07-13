@@ -159,28 +159,73 @@ class SecurityAgent:
         vulnerability_name = vulnerability.get('name', 'Unknown')
         
         prompt = f"""
-        Explain in simple terms why this Lua code is vulnerable to {vulnerability_name}:
-
+        You are a security educator explaining Lua smart contract vulnerabilities.
+        
+        **VULNERABILITY:** {vulnerability_name}
+        **DETECTED IN CODE:**
         ```lua
         {code_context}
         ```
-
-        Vulnerability detected: {vulnerability.get('description', '')}
-
-        Please explain:
-        1. Why this pattern is dangerous
-        2. What could go wrong
-        3. Real-world attack scenarios
-        4. Impact assessment
-
-        Keep the explanation clear and educational.
+        
+        **VULNERABILITY DETAILS:** {vulnerability.get('description', '')}
+        
+        Provide a comprehensive, educational explanation following this structure:
+        
+        ## 🔍 What is {vulnerability_name}?
+        
+        [Clear definition in simple terms]
+        
+        ## ⚠️ Why is this dangerous?
+        
+        **Immediate risks:**
+        - [Risk 1]
+        - [Risk 2]
+        
+        **Potential attack scenarios:**
+        1. [Scenario 1 with steps]
+        2. [Scenario 2 with steps]
+        
+        ## 💥 What could go wrong?
+        
+        **For users:** [Impact description]
+        **For the system:** [Impact description]
+        **Financial impact:** [Economic consequences]
+        
+        ## 🛡️ How to identify this vulnerability
+        
+        **Code patterns to watch for:**
+        - [Pattern 1]
+        - [Pattern 2]
+        
+        ## 📚 Real-world examples
+        
+        [Brief mention of similar vulnerabilities or attacks if applicable]
+        
+        Keep explanations:
+        - Educational and approachable
+        - Focused on practical understanding
+        - Specific to the code provided
+        - Clear about consequences and risks
         """
         
         try:
             response = self.model.generate_content(prompt)
             return response.text
         except Exception as e:
-            return f"Unable to generate explanation: {str(e)}"
+            return f"""
+            ## ⚠️ Explanation Unavailable
+            
+            I'm having trouble generating a detailed explanation right now.
+            
+            **Basic Info:**
+            - **Vulnerability:** {vulnerability_name}
+            - **Description:** {vulnerability.get('description', 'No description available')}
+            - **Severity:** {vulnerability.get('severity', 'Unknown')}
+            
+            **Error:** {str(e)}
+            
+            Please try again or consult security documentation for more details about {vulnerability_name}.
+            """
 
     def _build_remediation_prompt(self, vuln_name: str, vuln_desc: str, code: str, 
                                 line_number: int, severity: str) -> str:
@@ -189,32 +234,41 @@ class SecurityAgent:
         prompt = f"""
         You are a security expert specializing in Lua smart contract security. 
         
-        VULNERABILITY DETECTED:
-        - Type: {vuln_name}
-        - Description: {vuln_desc}
-        - Severity: {severity}
-        - Line: {line_number if line_number else 'Unknown'}
+        **VULNERABILITY DETECTED:**
+        - **Type:** {vuln_name}
+        - **Description:** {vuln_desc}
+        - **Severity:** {severity}
+        - **Line:** {line_number if line_number else 'Unknown'}
 
-        VULNERABLE CODE:
+        **VULNERABLE CODE:**
         ```lua
         {code}
         ```
 
-        Please provide:
-        1. EXPLANATION: Why this code is vulnerable
-        2. FIX: Secure version of the code
-        3. REASONING: Why your fix addresses the vulnerability
-        4. CONFIDENCE: Rate your fix confidence (1-10)
-        5. ADDITIONAL_NOTES: Any other security considerations
-
-        Format your response as JSON:
+        Please provide a comprehensive security analysis and fix suggestion.
+        
+        **Required Response Format (JSON):**
+        ```json
         {{
-            "explanation": "detailed explanation here",
-            "fixed_code": "secure code here",
-            "reasoning": "why this fix works",
+            "explanation": "Detailed explanation of why this code is vulnerable. Include what could go wrong and potential attack scenarios.",
+            "fixed_code": "Complete secure version of the code with proper safeguards",
+            "reasoning": "Step-by-step explanation of why your fix addresses the vulnerability and prevents attacks",
             "confidence": 8,
-            "additional_notes": "other considerations"
+            "additional_notes": "Any other security considerations, best practices, or related vulnerabilities to watch for",
+            "prevention_tips": [
+                "Specific tip 1 to prevent this vulnerability",
+                "Specific tip 2 for better security"
+            ]
         }}
+        ```
+
+        **Guidelines:**
+        - Explain vulnerabilities in simple terms
+        - Provide complete, working secure code
+        - Include specific prevention strategies
+        - Rate confidence honestly (1-10 scale)
+        - Focus on practical, implementable solutions
+        - Consider edge cases and related security issues
         """
         
         return prompt
@@ -326,26 +380,57 @@ class InteractiveChatAgent:
         You are a security expert assistant specializing in Lua smart contract security.
         You help developers understand vulnerabilities, best practices, and secure coding patterns.
         
-        Keep your responses:
-        - Clear and educational
-        - Focused on practical advice
-        - Specific to Lua/smart contract security when relevant
+        Format your responses clearly and professionally:
+        - Use markdown formatting for better readability
+        - Structure your responses with headers (## or ###)
+        - Use bullet points or numbered lists where appropriate
+        - Highlight important concepts with **bold text**
+        - Use `code snippets` when referencing code
+        - Use code blocks with ```lua for larger code examples
+        - Keep explanations clear and educational
+        - Focus on practical, actionable advice
+        - When explaining vulnerabilities, include:
+          1. What the vulnerability is
+          2. Why it's dangerous
+          3. How to fix it
+          4. Best practices to prevent it
+        
+        Example response format:
+        ## Understanding [Topic]
+        
+        **What it is:**
+        [Brief explanation]
+        
+        **Why it's dangerous:**
+        - [Risk 1]
+        - [Risk 2]
+        
+        **How to fix:**
+        ```lua
+        -- Secure code example
+        ```
+        
+        **Best practices:**
+        1. [Practice 1]
+        2. [Practice 2]
         """
         
         if code:
             base_prompt += f"""
             
-            CODE CONTEXT:
+            **CODE CONTEXT PROVIDED:**
             ```lua
             {code}
             ```
+            
+            Consider this code when providing your response. If relevant, analyze it for security issues.
             """
         
         base_prompt += f"""
         
-        USER QUESTION: {message}
+        **USER QUESTION:** {message}
         
-        Please provide a helpful, accurate response.
+        Please provide a helpful, well-formatted response following the guidelines above.
         """
         
         return base_prompt

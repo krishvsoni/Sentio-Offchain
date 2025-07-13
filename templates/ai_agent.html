@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lua Security Analyzer - AI Agent Enhanced</title>
+    <title>Sentio Arena</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-dark.min.css" rel="stylesheet">
     <style>
         * {
@@ -227,27 +227,165 @@
         }
 
         .chat-messages {
-            height: 300px;
+            height: 400px;
             overflow-y: auto;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
             padding: 15px;
             margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .chat-message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            animation: fadeIn 0.3s ease-in;
+            max-width: 85%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .chat-message.user {
-            background: rgba(78, 205, 196, 0.2);
-            text-align: right;
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(78, 205, 196, 0.1));
+            margin-left: auto;
+            border: 1px solid rgba(78, 205, 196, 0.3);
         }
 
         .chat-message.agent {
-            background: rgba(255, 107, 107, 0.2);
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.1));
+            margin-right: auto;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .chat-message.loading {
+            background: linear-gradient(135deg, rgba(254, 202, 87, 0.3), rgba(254, 202, 87, 0.1));
+            border: 1px solid rgba(254, 202, 87, 0.3);
+            margin-right: auto;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .chat-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .user-avatar {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .agent-avatar {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+        }
+
+        .chat-content {
+            line-height: 1.6;
+        }
+
+        .chat-content h1, .chat-content h2, .chat-content h3 {
+            color: #4ecdc4;
+            margin: 15px 0 10px 0;
+            font-size: 1.1em;
+        }
+
+        .chat-content h1 { font-size: 1.3em; }
+        .chat-content h2 { font-size: 1.2em; }
+        .chat-content h3 { font-size: 1.1em; }
+
+        .chat-content ul, .chat-content ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .chat-content li {
+            margin: 5px 0;
+        }
+
+        .chat-content p {
+            margin: 8px 0;
+        }
+
+        .chat-content strong {
+            color: #feca57;
+        }
+
+        .chat-content code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #4ecdc4;
+        }
+
+        .chat-content pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border-left: 3px solid #4ecdc4;
+        }
+
+        .chat-content blockquote {
+            border-left: 4px solid #feca57;
+            margin: 10px 0;
+            padding: 10px 15px;
+            background: rgba(254, 202, 87, 0.1);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .thinking-animation {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .thinking-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .thinking-dot {
+            width: 6px;
+            height: 6px;
+            background: #feca57;
+            border-radius: 50%;
+            animation: thinking 1.4s infinite ease-in-out;
+        }
+
+        .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes thinking {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .chat-timestamp {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 5px;
         }
 
         .chat-input {
@@ -329,9 +467,9 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🛡️ Lua Security Analyzer</h1>
+            <h1>Sentio Arena </h1>
             <p class="subtitle">AI-Powered Smart Contract Security Analysis</p>
-            <span class="ai-badge">🤖 AI Agent Enhanced</span>
+            <span class="ai-badge"> AI Agent Enhanced</span>
         </div>
 
         <div class="stats" id="stats" style="display: none;">
@@ -393,7 +531,21 @@ end</textarea>
                 </h2>
                 <div class="chat-messages" id="chatMessages">
                     <div class="chat-message agent">
-                        <strong>AI Agent:</strong> Hello! I'm your AI security assistant. I can help you understand vulnerabilities, suggest fixes, and answer security questions. Try asking me something like "Why is reentrancy dangerous?" or paste some code for analysis.
+                        <div class="chat-header">
+                            <div class="chat-avatar agent-avatar">🤖</div>
+                            <strong>AI Security Agent</strong>
+                            <span class="chat-timestamp">Just now</span>
+                        </div>
+                        <div class="chat-content">
+                            👋 <strong>Hello!</strong> I'm your AI security assistant. I can help you:
+                            <ul>
+                                <li>🔍 <strong>Understand vulnerabilities</strong> - Ask "Why is reentrancy dangerous?"</li>
+                                <li>🛠️ <strong>Get fix suggestions</strong> - Show me vulnerable code for solutions</li>
+                                <li>📚 <strong>Learn best practices</strong> - "What are common Lua security patterns?"</li>
+                                <li>🎯 <strong>Analyze specific code</strong> - Paste code and ask questions</li>
+                            </ul>
+                            Try asking me something like: <code>"Explain integer overflow attacks"</code> or paste some code for analysis!
+                        </div>
                     </div>
                 </div>
                 <div class="chat-input">
@@ -534,13 +686,18 @@ end</textarea>
             const resultsDiv = document.getElementById('results');
             
             if (data.message) {
-                resultsDiv.innerHTML = `
-                    <p style="color: #4ecdc4; text-align: center;">${data.message}</p>
-                    ${data.ai_analysis ? `<div class="ai-section">
+                let html = `<div class="ai-section" style="text-align: center; padding: 30px;">
+                    <h3 style="color: #4ecdc4;">✅ Clean Code!</h3>
+                    <p style="font-size: 1.1em; margin: 15px 0;">${data.message}</p>
+                </div>`;
+                
+                if (data.ai_analysis) {
+                    html += `<div class="ai-section">
                         <h4>🤖 AI Security Analysis</h4>
-                        <div style="white-space: pre-wrap;">${data.ai_analysis.ai_analysis}</div>
-                    </div>` : ''}
-                `;
+                        <div class="formatted-content">${formatAIResponse(data.ai_analysis.ai_analysis)}</div>
+                    </div>`;
+                }
+                resultsDiv.innerHTML = html;
                 return;
             }
 
@@ -549,9 +706,12 @@ end</textarea>
             // AI Overall Analysis
             if (data.ai_analysis) {
                 html += `
-                    <div class="ai-section" style="margin-bottom: 20px;">
-                        <h4>🤖 AI Security Overview</h4>
-                        <div style="white-space: pre-wrap;">${data.ai_analysis.ai_analysis}</div>
+                    <div class="ai-section" style="margin-bottom: 25px; border: 2px solid rgba(254, 202, 87, 0.4);">
+                        <h4 style="display: flex; align-items: center; gap: 10px; color: #feca57; font-size: 1.3em;">
+                            🤖 AI Security Overview
+                            <span style="background: linear-gradient(45deg, #feca57, #ff6b6b); padding: 3px 8px; border-radius: 12px; font-size: 0.7em; color: white;">ENHANCED</span>
+                        </h4>
+                        <div class="formatted-content">${formatAIResponse(data.ai_analysis.ai_analysis)}</div>
                     </div>
                 `;
             }
@@ -559,42 +719,80 @@ end</textarea>
             // Enhanced Vulnerabilities
             data.vulnerabilities.forEach((vuln, index) => {
                 html += `
-                    <div class="vulnerability-card ai-enhanced">
+                    <div class="vulnerability-card ai-enhanced" style="border-left: 4px solid #feca57; margin-bottom: 25px;">
                         <div class="vulnerability-header">
-                            <span class="vulnerability-name">${vuln.name}</span>
+                            <span class="vulnerability-name" style="display: flex; align-items: center; gap: 8px;">
+                                🔒 ${vuln.name}
+                                <span style="background: rgba(254, 202, 87, 0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.7em;">AI Enhanced</span>
+                            </span>
                             <span class="severity-badge severity-${vuln.severity}">${vuln.severity.toUpperCase()}</span>
                         </div>
-                        <p><strong>Description:</strong> ${vuln.description}</p>
-                        <p><strong>Pattern:</strong> ${vuln.pattern}</p>
-                        <p><strong>Line:</strong> ${vuln.line || 'Unknown'}</p>
+                        
+                        <div style="margin: 15px 0;">
+                            <p><strong>📋 Description:</strong> ${vuln.description}</p>
+                            <p><strong>🏷️ Pattern:</strong> ${vuln.pattern}</p>
+                            <p><strong>📍 Line:</strong> ${vuln.line || 'Unknown'}</p>
+                        </div>
                         
                         ${vuln.code_context ? `
-                            <div style="margin-top: 15px;">
-                                <strong>Code Context (Lines ${vuln.context_lines.start}-${vuln.context_lines.end}):</strong>
+                            <div style="margin: 20px 0;">
+                                <h5 style="color: #4ecdc4; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                    📝 Code Context <span style="font-size: 0.8em; opacity: 0.8;">(Lines ${vuln.context_lines.start}-${vuln.context_lines.end})</span>
+                                </h5>
                                 <div class="code-block"><pre><code class="language-lua">${vuln.code_context}</code></pre></div>
                             </div>
                         ` : ''}
                         
                         ${vuln.ai_explanation ? `
-                            <div class="ai-section">
-                                <h4>🤖 AI Explanation</h4>
-                                <div style="white-space: pre-wrap;">${vuln.ai_explanation}</div>
+                            <div class="ai-section" style="margin: 20px 0; background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.05));">
+                                <h4 style="color: #ff6b6b; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                    � AI Explanation
+                                    <span style="font-size: 0.7em; background: rgba(255, 107, 107, 0.2); padding: 2px 6px; border-radius: 8px;">Educational</span>
+                                </h4>
+                                <div class="formatted-content">${formatAIResponse(vuln.ai_explanation)}</div>
                             </div>
                         ` : ''}
                         
                         ${vuln.ai_fix && vuln.ai_fix.explanation ? `
-                            <div class="ai-section">
-                                <h4>🔧 AI Fix Suggestion</h4>
-                                <p><strong>Explanation:</strong> ${vuln.ai_fix.explanation}</p>
-                                ${vuln.ai_fix.fixed_code ? `
-                                    <p><strong>Fixed Code:</strong></p>
-                                    <div class="code-block"><pre><code class="language-lua">${vuln.ai_fix.fixed_code}</code></pre></div>
+                            <div class="ai-section" style="margin: 20px 0; background: linear-gradient(135deg, rgba(78, 205, 196, 0.1), rgba(78, 205, 196, 0.05)); border-left: 4px solid #4ecdc4;">
+                                <h4 style="color: #4ecdc4; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                    🔧 AI Fix Suggestion
+                                    ${vuln.ai_fix.confidence ? `<span style="font-size: 0.7em; background: rgba(78, 205, 196, 0.2); padding: 2px 6px; border-radius: 8px;">Confidence: ${vuln.ai_fix.confidence}/10</span>` : ''}
+                                </h4>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <h6 style="color: #4ecdc4; margin-bottom: 8px;">💡 Why this fix works:</h6>
+                                    <div class="formatted-content">${formatAIResponse(vuln.ai_fix.explanation)}</div>
+                                </div>
+                                
+                                ${vuln.ai_fix.fixed_code && vuln.ai_fix.fixed_code !== 'No fixed code provided' ? `
+                                    <div style="margin: 15px 0;">
+                                        <h6 style="color: #4ecdc4; margin-bottom: 8px;">✅ Secure Code:</h6>
+                                        <div class="code-block"><pre><code class="language-lua">${vuln.ai_fix.fixed_code}</code></pre></div>
+                                    </div>
                                 ` : ''}
+                                
                                 ${vuln.ai_fix.reasoning ? `
-                                    <p><strong>Reasoning:</strong> ${vuln.ai_fix.reasoning}</p>
+                                    <div style="margin: 15px 0;">
+                                        <h6 style="color: #4ecdc4; margin-bottom: 8px;">🛡️ Security Reasoning:</h6>
+                                        <div class="formatted-content">${formatAIResponse(vuln.ai_fix.reasoning)}</div>
+                                    </div>
                                 ` : ''}
-                                ${vuln.ai_fix.confidence ? `
-                                    <p><strong>Confidence:</strong> ${vuln.ai_fix.confidence}/10</p>
+                                
+                                ${vuln.ai_fix.prevention_tips && vuln.ai_fix.prevention_tips.length > 0 ? `
+                                    <div style="margin: 15px 0;">
+                                        <h6 style="color: #4ecdc4; margin-bottom: 8px;">🎯 Prevention Tips:</h6>
+                                        <ul style="margin-left: 20px;">
+                                            ${vuln.ai_fix.prevention_tips.map(tip => `<li style="margin: 5px 0;">${tip}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${vuln.ai_fix.additional_notes ? `
+                                    <div style="margin: 15px 0; padding: 10px; background: rgba(254, 202, 87, 0.1); border-radius: 8px;">
+                                        <h6 style="color: #feca57; margin-bottom: 8px;">📚 Additional Notes:</h6>
+                                        <div class="formatted-content">${formatAIResponse(vuln.ai_fix.additional_notes)}</div>
+                                    </div>
                                 ` : ''}
                             </div>
                         ` : ''}
@@ -603,6 +801,39 @@ end</textarea>
             });
 
             resultsDiv.innerHTML = html;
+            
+            // Add formatted content styling
+            if (!document.getElementById('formatted-content-style')) {
+                const style = document.createElement('style');
+                style.id = 'formatted-content-style';
+                style.textContent = `
+                    .formatted-content h1, .formatted-content h2, .formatted-content h3 {
+                        color: #4ecdc4 !important;
+                        margin: 15px 0 10px 0;
+                    }
+                    .formatted-content strong { color: #feca57 !important; }
+                    .formatted-content code { 
+                        background: rgba(0, 0, 0, 0.4) !important; 
+                        color: #4ecdc4 !important; 
+                        padding: 2px 6px; 
+                        border-radius: 4px;
+                    }
+                    .formatted-content ul, .formatted-content ol { 
+                        margin: 10px 0; 
+                        padding-left: 20px; 
+                    }
+                    .formatted-content li { margin: 5px 0; }
+                    .formatted-content p { margin: 8px 0; line-height: 1.6; }
+                    .formatted-content blockquote {
+                        border-left: 4px solid #feca57;
+                        margin: 10px 0;
+                        padding: 10px 15px;
+                        background: rgba(254, 202, 87, 0.1);
+                        border-radius: 0 8px 8px 0;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
             
             // Re-highlight syntax
             if (window.Prism) {
@@ -616,16 +847,49 @@ end</textarea>
             if (!message) return;
 
             const chatMessages = document.getElementById('chatMessages');
+            const timestamp = new Date().toLocaleTimeString();
             
-            // Add user message
-            chatMessages.innerHTML += `
+            // Add user message with better formatting
+            const userMessageHTML = `
                 <div class="chat-message user">
-                    <strong>You:</strong> ${message}
+                    <div class="chat-header">
+                        <span class="chat-timestamp">${timestamp}</span>
+                        <strong>You</strong>
+                        <div class="chat-avatar user-avatar">👤</div>
+                    </div>
+                    <div class="chat-content">${escapeHtml(message)}</div>
                 </div>
             `;
+            chatMessages.innerHTML += userMessageHTML;
 
             // Clear input
             input.value = '';
+
+            // Add loading message
+            const loadingId = 'loading-' + Date.now();
+            const loadingHTML = `
+                <div class="chat-message loading" id="${loadingId}">
+                    <div class="chat-header">
+                        <div class="chat-avatar agent-avatar">🤖</div>
+                        <strong>AI Security Agent</strong>
+                        <span class="chat-timestamp">${timestamp}</span>
+                    </div>
+                    <div class="chat-content">
+                        <div class="thinking-animation">
+                            <span>🧠 Thinking</span>
+                            <div class="thinking-dots">
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.innerHTML += loadingHTML;
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
 
             // Get code context if available
             const code = document.getElementById('codeInput').value;
@@ -644,23 +908,112 @@ end</textarea>
 
                 const data = await response.json();
                 
-                // Add agent response
-                chatMessages.innerHTML += `
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                
+                // Add agent response with beautiful formatting
+                const responseTime = new Date().toLocaleTimeString();
+                const formattedResponse = formatAIResponse(data.response);
+                
+                const agentMessageHTML = `
                     <div class="chat-message agent">
-                        <strong>AI Agent:</strong> <div style="white-space: pre-wrap; margin-top: 5px;">${data.response}</div>
+                        <div class="chat-header">
+                            <div class="chat-avatar agent-avatar">🤖</div>
+                            <strong>AI Security Agent</strong>
+                            <span class="chat-timestamp">${responseTime}</span>
+                        </div>
+                        <div class="chat-content">${formattedResponse}</div>
                     </div>
                 `;
+                chatMessages.innerHTML += agentMessageHTML;
                 
             } catch (error) {
-                chatMessages.innerHTML += `
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                
+                const errorTime = new Date().toLocaleTimeString();
+                const errorHTML = `
                     <div class="chat-message agent">
-                        <strong>AI Agent:</strong> Sorry, I'm having trouble responding right now. Error: ${error.message}
+                        <div class="chat-header">
+                            <div class="chat-avatar agent-avatar">⚠️</div>
+                            <strong>AI Security Agent</strong>
+                            <span class="chat-timestamp">${errorTime}</span>
+                        </div>
+                        <div class="chat-content">
+                            <p>🚨 <strong>Oops!</strong> I'm having trouble responding right now.</p>
+                            <p><strong>Error:</strong> <code>${error.message}</code></p>
+                            <p>Please try again in a moment or contact support if the issue persists.</p>
+                        </div>
                     </div>
                 `;
+                chatMessages.innerHTML += errorHTML;
             }
 
             // Scroll to bottom
             chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatAIResponse(response) {
+            if (!response) return '<p>No response received.</p>';
+            
+            // Convert markdown-like formatting to HTML
+            let formatted = response
+                // Headers
+                .replace(/### (.*?)$/gm, '<h3>$1</h3>')
+                .replace(/## (.*?)$/gm, '<h2>$1</h2>')
+                .replace(/# (.*?)$/gm, '<h1>$1</h1>')
+                
+                // Bold text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                
+                // Code blocks
+                .replace(/```(\w+)?\n([\s\S]*?)\n```/g, '<pre><code class="language-$1">$2</code></pre>')
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                
+                // Lists
+                .replace(/^\* (.*?)$/gm, '<li>$1</li>')
+                .replace(/^- (.*?)$/gm, '<li>$1</li>')
+                .replace(/^\d+\. (.*?)$/gm, '<li>$1</li>')
+                
+                // Blockquotes
+                .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
+                
+                // Line breaks
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            
+            // Wrap in paragraphs if not already wrapped
+            if (!formatted.startsWith('<') || formatted.includes('<br>')) {
+                formatted = '<p>' + formatted + '</p>';
+            }
+            
+            // Clean up list formatting
+            formatted = formatted
+                .replace(/(<li>.*?<\/li>)/gs, (match) => {
+                    const items = match.match(/<li>.*?<\/li>/g);
+                    return '<ul>' + items.join('') + '</ul>';
+                });
+            
+            // Add emoji support for common patterns
+            formatted = formatted
+                .replace(/\b(vulnerability|vulnerable|security)\b/gi, '🔒 $1')
+                .replace(/\b(fix|solution|secure)\b/gi, '🛠️ $1')
+                .replace(/\b(warning|danger|risk)\b/gi, '⚠️ $1')
+                .replace(/\b(example|demo)\b/gi, '💡 $1')
+                .replace(/\b(important|critical)\b/gi, '🚨 $1')
+                .replace(/\b(tip|hint|note)\b/gi, '💭 $1');
+            
+            return formatted;
         }
 
         function clearResults() {

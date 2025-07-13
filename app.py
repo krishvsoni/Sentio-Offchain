@@ -15,6 +15,7 @@ from luaparser import ast, astnodes
 import luaparser
 from luaparser.astnodes import *
 from flask_cors import CORS
+from datetime import datetime
 from ai_agent import create_security_agent, create_chat_agent
 from learning_agent import create_learning_agent
 
@@ -782,26 +783,43 @@ def has_access_control(node):
 def analyze_lua_code(code):
     global vulnerabilities
     vulnerabilities = []
-    analyze_arithmetic(code)
-    analyze_flash_loans(code)
-    analyze_oracle_manipulation(code)
-    analyze_frontrunning(code)
-    analyze_tag_handling_security(code)
-    analyze_state_reset_misuse(code)
-    # analyze_replay_attacks(code)
-    analyze_improper_balance_checks(code)
-    analyze_reentrancy_in_handlers(code)
-    analyze_unhandled_errors_in_handlers(code)
-    analyze_access_control(code)
-    analyze_overflow_and_return(code)
-    analyze_underflow_and_return(code)
-    analyze_return(code)
-    check_private_key_exposure(code)
-    analyze_reentrancy(code)
-    analyze_floating_pragma(code)
-    analyze_denial_of_service(code)
-    analyze_unchecked_external_calls(code)
-    analyze_greedy_suicidal_functions(code)
+    
+    try:
+        tree = ast.parse(code)
+        
+        # Pass tree to functions that expect it
+        analyze_arithmetic(tree)
+        analyze_flash_loans(tree)
+        analyze_oracle_manipulation(tree)
+        analyze_frontrunning(tree)
+        analyze_event_logging(tree)
+        
+        # Pass code to functions that expect raw code
+        analyze_tag_handling_security(code)
+        analyze_state_reset_misuse(code)
+        analyze_replay_attacks(code)
+        analyze_improper_balance_checks(code)
+        analyze_reentrancy_in_handlers(code)
+        analyze_unhandled_errors_in_handlers(code)
+        analyze_access_control(code)
+        analyze_overflow_and_return(code)
+        analyze_underflow_and_return(code)
+        analyze_return(code)
+        check_private_key_exposure(code)
+        analyze_reentrancy(code)
+        analyze_floating_pragma(code)
+        analyze_denial_of_service(code)
+        analyze_unchecked_external_calls(code)
+        analyze_greedy_suicidal_functions(code)
+        
+    except Exception as e:
+        add_vulnerability(
+            "Parse Error",
+            f"Failed to parse Lua code: {str(e)}",
+            "parse_error",
+            "medium",
+            1
+        )
     
     return vulnerabilities
 
@@ -1102,37 +1120,66 @@ def train_learning_agent():
 
 @app.route("/learning/analyze", methods=["POST"])
 def learning_analyze():
-    """Analyze code using learned patterns"""
+    """Enhanced analysis using learned patterns with auto-learning"""
     try:
         data = request.json
         code = data.get("code", "")
+        enable_auto_learning = data.get("auto_learn", True)
         
         if not code:
             return jsonify({"error": "No code provided"}), 400
         
         learning_agent = create_learning_agent()
         
-        # Check against learned patterns
+        # Check against learned patterns first
         learned_matches = learning_agent.check_against_learned_patterns(code)
         
-        # Also run traditional analysis for comparison
+        # Run traditional analysis for comparison and learning
         global vulnerabilities
         vulnerabilities = []
         traditional_vulns = analyze_lua_code(code)
         
-        # Train the learning agent with new findings
-        for vuln in traditional_vulns:
-            learning_agent.learn_from_vulnerability(code, vuln)
+        # Auto-learn from analysis results
+        learning_summary = {}
+        if enable_auto_learning and traditional_vulns:
+            learning_summary = learning_agent.auto_learn_from_analysis(code, traditional_vulns)
+        
+        # Validate patterns periodically (every 50 patterns)
+        validation_report = {}
+        if len(learning_agent.patterns) % 50 == 0 and len(learning_agent.patterns) > 0:
+            validation_report = learning_agent.validate_patterns()
+        
+        # Get learning recommendations
+        recommendations = learning_agent.get_learning_recommendations()
+        
+        # Enhanced learning stats
+        learning_stats = learning_agent.get_learning_stats()
         
         learning_agent.save_patterns()
         
-        return jsonify({
+        response_data = {
             "learned_patterns": learned_matches,
             "traditional_vulnerabilities": traditional_vulns,
-            "learning_stats": learning_agent.get_learning_stats()
-        })
+            "learning_stats": learning_stats,
+            "auto_learning_summary": learning_summary,
+            "learning_recommendations": recommendations,
+            "analysis_metadata": {
+                "total_patterns_checked": len(learned_matches),
+                "traditional_vulns_found": len(traditional_vulns),
+                "code_length": len(code),
+                "auto_learning_enabled": enable_auto_learning,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        # Include validation report if available
+        if validation_report:
+            response_data["validation_report"] = validation_report
+        
+        return jsonify(response_data)
+        
     except Exception as e:
-        return jsonify({"error": f"Learning analysis failed: {str(e)}"}), 500
+        return jsonify({"error": f"Enhanced learning analysis failed: {str(e)}"}), 500
 
 @app.route("/learning/export", methods=["GET"])
 def export_patterns():
@@ -1149,9 +1196,111 @@ def export_patterns():
     except Exception as e:
         return jsonify({"error": f"Export failed: {str(e)}"}), 500
 
-# ============================================================================
-# END LEARNING AGENT ENDPOINTS
-# ============================================================================
+@app.route("/learning/validate", methods=["POST"])
+def validate_learning_patterns():
+    """Validate and clean up learning patterns"""
+    try:
+        learning_agent = create_learning_agent()
+        validation_report = learning_agent.validate_patterns()
+        learning_agent.save_patterns()
+        
+        return jsonify({
+            "validation_report": validation_report,
+            "updated_stats": learning_agent.get_learning_stats()
+        })
+    except Exception as e:
+        return jsonify({"error": f"Pattern validation failed: {str(e)}"}), 500
+
+@app.route("/learning/recommendations", methods=["GET"])
+def get_learning_recommendations():
+    """Get learning recommendations for improving the AI agent"""
+    try:
+        learning_agent = create_learning_agent()
+        recommendations = learning_agent.get_learning_recommendations()
+        stats = learning_agent.get_learning_stats()
+        
+        return jsonify({
+            "recommendations": recommendations,
+            "learning_stats": stats,
+            "insights": stats.get("learning_insights", [])
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to get recommendations: {str(e)}"}), 500
+
+@app.route("/learning/dashboard", methods=["GET"])
+def learning_dashboard():
+    """Get comprehensive learning dashboard data"""
+    try:
+        learning_agent = create_learning_agent()
+        stats = learning_agent.get_learning_stats()
+        recommendations = learning_agent.get_learning_recommendations()
+        
+        # Calculate additional dashboard metrics
+        dashboard_data = {
+            "overview": {
+                "total_patterns": stats.get("total_patterns", 0),
+                "average_accuracy": round(stats.get("average_accuracy", 0), 3),
+                "average_confidence": round(stats.get("average_confidence", 0), 3),
+                "learning_health": "Excellent" if stats.get("average_accuracy", 0) > 0.8 else 
+                                 "Good" if stats.get("average_accuracy", 0) > 0.6 else 
+                                 "Needs Improvement"
+            },
+            "vulnerability_analysis": stats.get("vulnerability_analysis", {}),
+            "top_performers": stats.get("top_performing_patterns", []),
+            "learning_insights": stats.get("learning_insights", []),
+            "recommendations": recommendations,
+            "cache_performance": stats.get("cache_stats", {}),
+            "learning_metadata": stats.get("learning_metadata", {}),
+            "patterns_by_type": stats.get("patterns_by_type", {}),
+            "vulnerability_weights": stats.get("vulnerability_weights", {})
+        }
+        
+        return jsonify(dashboard_data)
+    except Exception as e:
+        return jsonify({"error": f"Dashboard data failed: {str(e)}"}), 500
+
+# Helper functions for vulnerability detection
+def has_slippage_control(node):
+    """Check if a swap/liquidity function has slippage protection."""
+    # Look for slippage-related parameters or conditions
+    if hasattr(node, 'args'):
+        for arg in node.args:
+            if isinstance(arg, astnodes.Name) and 'slippage' in arg.id.lower():
+                return True
+    return False
+
+def has_multiple_oracles(node):
+    """Check if oracle calls use multiple price feeds."""
+    # Look for multiple oracle sources or aggregation
+    if hasattr(node, 'args'):
+        oracle_count = 0
+        for arg in node.args:
+            if isinstance(arg, astnodes.Name) and 'oracle' in arg.id.lower():
+                oracle_count += 1
+        return oracle_count > 1
+    return False
+
+def is_balance_check(node):
+    """Check if a condition involves balance checking."""
+    if isinstance(node, astnodes.Call) and isinstance(node.func, astnodes.Name):
+        return node.func.id in ['balance', 'get_balance', 'balanceOf']
+    return False
+
+def has_reentrancy_guard(node):
+    """Check if a function has reentrancy protection."""
+    # Look for reentrancy guard patterns
+    current = node
+    while hasattr(current, '_parent'):
+        current = current._parent
+        if isinstance(current, astnodes.Function):
+            # Check for guard variables or modifiers
+            for stmt in ast.walk(current):
+                if isinstance(stmt, astnodes.LocalAssign):
+                    for target in stmt.targets:
+                        if isinstance(target, astnodes.Name) and 'guard' in target.id.lower():
+                            return True
+            break
+    return False
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
