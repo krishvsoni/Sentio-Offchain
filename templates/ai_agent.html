@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentio Arena</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/themes/prism-dark.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            font-size: 1.2rem;
+            color: #b8c6db;
+            margin-bottom: 10px;
+        }
+
+        .ai-badge {
+            display: inline-block;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #4ecdc4;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        #codeInput {
+            width: 100%;
+            height: 300px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+            color: white;
+        }
+
+        .btn-ai {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-panel {
+            grid-column: 1 / -1;
+        }
+
+        .vulnerability-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-left: 4px solid #ff6b6b;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .vulnerability-card:hover {
+            transform: translateX(5px);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .vulnerability-card.ai-enhanced {
+            border-left-color: #feca57;
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(254, 202, 87, 0.1));
+        }
+
+        .vulnerability-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .vulnerability-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .severity-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+
+        .severity-high { background: #e74c3c; }
+        .severity-medium { background: #f39c12; }
+        .severity-low { background: #27ae60; }
+
+        .ai-section {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(254, 202, 87, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(254, 202, 87, 0.3);
+        }
+
+        .ai-section h4 {
+            color: #feca57;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+
+        .chat-panel {
+            grid-column: 1 / -1;
+            max-height: 500px;
+        }
+
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-message {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 12px;
+            animation: fadeIn 0.3s ease-in;
+            max-width: 85%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chat-message.user {
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.3), rgba(78, 205, 196, 0.1));
+            margin-left: auto;
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .chat-message.agent {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.3), rgba(255, 107, 107, 0.1));
+            margin-right: auto;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .chat-message.loading {
+            background: linear-gradient(135deg, rgba(254, 202, 87, 0.3), rgba(254, 202, 87, 0.1));
+            border: 1px solid rgba(254, 202, 87, 0.3);
+            margin-right: auto;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        .chat-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .user-avatar {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .agent-avatar {
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+        }
+
+        .chat-content {
+            line-height: 1.6;
+        }
+
+        .chat-content h1, .chat-content h2, .chat-content h3 {
+            color: #4ecdc4;
+            margin: 15px 0 10px 0;
+            font-size: 1.1em;
+        }
+
+        .chat-content h1 { font-size: 1.3em; }
+        .chat-content h2 { font-size: 1.2em; }
+        .chat-content h3 { font-size: 1.1em; }
+
+        .chat-content ul, .chat-content ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .chat-content li {
+            margin: 5px 0;
+        }
+
+        .chat-content p {
+            margin: 8px 0;
+        }
+
+        .chat-content strong {
+            color: #feca57;
+        }
+
+        .chat-content code {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #4ecdc4;
+        }
+
+        .chat-content pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            border-left: 3px solid #4ecdc4;
+        }
+
+        .chat-content blockquote {
+            border-left: 4px solid #feca57;
+            margin: 10px 0;
+            padding: 10px 15px;
+            background: rgba(254, 202, 87, 0.1);
+            border-radius: 0 8px 8px 0;
+        }
+
+        .thinking-animation {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .thinking-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .thinking-dot {
+            width: 6px;
+            height: 6px;
+            background: #feca57;
+            border-radius: 50%;
+            animation: thinking 1.4s infinite ease-in-out;
+        }
+
+        .thinking-dot:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes thinking {
+            0%, 80%, 100% {
+                transform: scale(0.8);
+                opacity: 0.5;
+            }
+            40% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .chat-timestamp {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            color: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #4ecdc4;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #4ecdc4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .stat-label {
+            color: #b8c6db;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .btn {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sentio Arena </h1>
+            <p class="subtitle">AI-Powered Smart Contract Security Analysis</p>
+            <span class="ai-badge"> AI Agent Enhanced</span>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalLines">0</div>
+                <div class="stat-label">Total Lines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="vulnerableLines">0</div>
+                <div class="stat-label">Vulnerable Lines</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="vulnerabilityCount">0</div>
+                <div class="stat-label">Vulnerabilities Found</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>
+                    <span>📝 Code Input</span>
+                </h2>
+                <textarea id="codeInput" placeholder="Paste your Lua smart contract code here...">-- Example vulnerable Lua code
+local balance = 1000000000
+local amount = 2147483647
+
+-- Potential integer overflow
+local new_balance = balance + amount
+
+-- Reentrancy vulnerability
+function transfer(to, value)
+    if balance >= value then
+        call_external(to, value)  -- External call before state change
+        balance = balance - value
+    end
+end
+
+-- Missing access control
+function emergency_withdraw()
+    send_all_funds(owner)
+end</textarea>
+                
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="analyzeCode()">
+                        🔍 Traditional Analysis
+                    </button>
+                    <button class="btn btn-ai" onclick="aiAnalyzeCode()">
+                        🤖 AI Enhanced Analysis
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearResults()">
+                        🗑️ Clear
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>
+                    <span>🤖 AI Security Assistant</span>
+                </h2>
+                <div class="chat-messages" id="chatMessages">
+                    <div class="chat-message agent">
+                        <div class="chat-header">
+                            <div class="chat-avatar agent-avatar">🤖</div>
+                            <strong>AI Security Agent</strong>
+                            <span class="chat-timestamp">Just now</span>
+                        </div>
+                        <div class="chat-content">
+                            👋 <strong>Hello!</strong> I'm your AI security assistant. I can help you:
+                            <ul>
+                                <li>🔍 <strong>Understand vulnerabilities</strong> - Ask "Why is reentrancy dangerous?"</li>
+                                <li>🛠️ <strong>Get fix suggestions</strong> - Show me vulnerable code for solutions</li>
+                                <li>📚 <strong>Learn best practices</strong> - "What are common Lua security patterns?"</li>
+                                <li>🎯 <strong>Analyze specific code</strong> - Paste code and ask questions</li>
+                            </ul>
+                            Try asking me something like: <code>"Explain integer overflow attacks"</code> or paste some code for analysis!
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" id="chatInput" placeholder="Ask me about security..." 
+                           onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <button class="btn btn-ai" onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel results-panel">
+            <h2>
+                <span>📊 Analysis Results</span>
+            </h2>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>AI Agent is analyzing your code...</p>
+            </div>
+
+            <div id="results">
+                <p style="text-align: center; color: #b8c6db; margin: 40px 0;">
+                    No analysis performed yet. Upload your Lua code to begin.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.24.1/components/prism-lua.min.js"></script>
+    
+    <script>
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function updateStats(data) {
+            if (data.total_lines !== undefined) {
+                document.getElementById('totalLines').textContent = data.total_lines;
+                document.getElementById('vulnerableLines').textContent = data.vulnerable_lines || 0;
+                document.getElementById('vulnerabilityCount').textContent = 
+                    data.vulnerabilities ? data.vulnerabilities.length : 0;
+                document.getElementById('stats').style.display = 'grid';
+            }
+        }
+
+        async function analyzeCode() {
+            const code = document.getElementById('codeInput').value;
+            if (!code.trim()) {
+                alert('Please enter some code to analyze');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('code', code);
+
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                updateStats(data);
+                displayTraditionalResults(data);
+            } catch (error) {
+                document.getElementById('results').innerHTML = 
+                    `<p style="color: #ff6b6b;">Error: ${error.message}</p>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function aiAnalyzeCode() {
+            const code = document.getElementById('codeInput').value;
+            if (!code.trim()) {
+                alert('Please enter some code to analyze');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                const response = await fetch('/ai/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ code })
+                });
+
+                const data = await response.json();
+                updateStats(data);
+                displayAIResults(data);
+            } catch (error) {
+                document.getElementById('results').innerHTML = 
+                    `<p style="color: #ff6b6b;">Error: ${error.message}</p>`;
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayTraditionalResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.message) {
+                resultsDiv.innerHTML = `<p style="color: #4ecdc4; text-align: center;">${data.message}</p>`;
+                return;
+            }
+
+            let html = '';
+            data.vulnerabilities.forEach((vuln, index) => {
+                html += `
+                    <div class="vulnerability-card">
+                        <div class="vulnerability-header">
+                            <span class="vulnerability-name">${vuln.name}</span>
+                            <span class="severity-badge severity-${vuln.severity}">${vuln.severity.toUpperCase()}</span>
+                        </div>
+                        <p><strong>Description:</strong> ${vuln.description}</p>
+                        <p><strong>Pattern:</strong> ${vuln.pattern}</p>
+                        <p><strong>Line:</strong> ${vuln.line || 'Unknown'}</p>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function displayAIResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (data.message) {
+                let html = `<div class="ai-section" style="text-align: center; padding: 30px;">
+                    <h3 style="color: #4ecdc4;">✅ Clean Code!</h3>
+                    <p style="font-size: 1.1em; margin: 15px 0;">${data.message}</p>
+                </div>`;
+                
+                if (data.ai_analysis) {
+                    html += `<div class="ai-section">
+                        <h4>🤖 AI Security Analysis</h4>
+                        <div class="formatted-content">${formatAIResponse(data.ai_analysis.ai_analysis)}</div>
+                    </div>`;
+                }
+                resultsDiv.innerHTML = html;
+                return;
+            }
+
+            let html = '';
+            
+            // AI Overall Analysis
+            if (data.ai_analysis) {
+                html += `
+                    <div class="ai-section" style="margin-bottom: 25px; border: 2px solid rgba(254, 202, 87, 0.4);">
+                        <h4 style="display: flex; align-items: center; gap: 10px; color: #feca57; font-size: 1.3em;">
+                            🤖 AI Security Overview
+                            <span style="background: linear-gradient(45deg, #feca57, #ff6b6b); padding: 3px 8px; border-radius: 12px; font-size: 0.7em; color: white;">ENHANCED</span>
+                        </h4>
+                        <div class="formatted-content">${formatAIResponse(data.ai_analysis.ai_analysis)}</div>
+                    </div>
+                `;
+            }
+
+            // Enhanced Vulnerabilities
+            data.vulnerabilities.forEach((vuln, index) => {
+                html += `
+                    <div class="vulnerability-card ai-enhanced" style="border-left: 4px solid #feca57; margin-bottom: 25px;">
+                        <div class="vulnerability-header">
+                            <span class="vulnerability-name" style="display: flex; align-items: center; gap: 8px;">
+                                🔒 ${vuln.name}
+                                <span style="background: rgba(254, 202, 87, 0.2); padding: 2px 8px; border-radius: 10px; font-size: 0.7em;">AI Enhanced</span>
+                            </span>
+                            <span class="severity-badge severity-${vuln.severity}">${vuln.severity.toUpperCase()}</span>
+                        </div>
+                        
+                        <div style="margin: 15px 0;">
+                            <p><strong>📋 Description:</strong> ${vuln.description}</p>
+                            <p><strong>🏷️ Pattern:</strong> ${vuln.pattern}</p>
+                            <p><strong>📍 Line:</strong> ${vuln.line || 'Unknown'}</p>
+                        </div>
+                        
+                        ${vuln.code_context ? `
+                            <div style="margin: 20px 0;">
+                                <h5 style="color: #4ecdc4; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                    📝 Code Context <span style="font-size: 0.8em; opacity: 0.8;">(Lines ${vuln.context_lines.start}-${vuln.context_lines.end})</span>
+                                </h5>
+                                <div class="code-block"><pre><code class="language-lua">${vuln.code_context}</code></pre></div>
+                            </div>
+                        ` : ''}
+                        
+                        ${vuln.ai_explanation ? `
+                            <div class="ai-section" style="margin: 20px 0; background: linear-gradient(135deg, rgba(255, 107, 107, 0.1), rgba(255, 107, 107, 0.05));">
+                                <h4 style="color: #ff6b6b; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                    � AI Explanation
+                                    <span style="font-size: 0.7em; background: rgba(255, 107, 107, 0.2); padding: 2px 6px; border-radius: 8px;">Educational</span>
+                                </h4>
+                                <div class="formatted-content">${formatAIResponse(vuln.ai_explanation)}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${vuln.ai_fix && vuln.ai_fix.explanation ? `
+                            <div class="ai-section" style="margin: 20px 0; background: linear-gradient(135deg, rgba(78, 205, 196, 0.1), rgba(78, 205, 196, 0.05)); border-left: 4px solid #4ecdc4;">
+                                <h4 style="color: #4ecdc4; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                    🔧 AI Fix Suggestion
+                                    ${vuln.ai_fix.confidence ? `<span style="font-size: 0.7em; background: rgba(78, 205, 196, 0.2); padding: 2px 6px; border-radius: 8px;">Confidence: ${vuln.ai_fix.confidence}/10</span>` : ''}
+                                </h4>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <h6 style="color: #4ecdc4; margin-bottom: 8px;">💡 Why this fix works:</h6>
+                                    <div class="formatted-content">${formatAIResponse(vuln.ai_fix.explanation)}</div>
+                                </div>
+                                
+                                ${vuln.ai_fix.fixed_code && vuln.ai_fix.fixed_code !== 'No fixed code provided' ? `
+                                    <div style="margin: 15px 0;">
+                                        <h6 style="color: #4ecdc4; margin-bottom: 8px;">✅ Secure Code:</h6>
+                                        <div class="code-block"><pre><code class="language-lua">${vuln.ai_fix.fixed_code}</code></pre></div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${vuln.ai_fix.reasoning ? `
+                                    <div style="margin: 15px 0;">
+                                        <h6 style="color: #4ecdc4; margin-bottom: 8px;">🛡️ Security Reasoning:</h6>
+                                        <div class="formatted-content">${formatAIResponse(vuln.ai_fix.reasoning)}</div>
+                                    </div>
+                                ` : ''}
+                                
+                                ${vuln.ai_fix.prevention_tips && vuln.ai_fix.prevention_tips.length > 0 ? `
+                                    <div style="margin: 15px 0;">
+                                        <h6 style="color: #4ecdc4; margin-bottom: 8px;">🎯 Prevention Tips:</h6>
+                                        <ul style="margin-left: 20px;">
+                                            ${vuln.ai_fix.prevention_tips.map(tip => `<li style="margin: 5px 0;">${tip}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                                
+                                ${vuln.ai_fix.additional_notes ? `
+                                    <div style="margin: 15px 0; padding: 10px; background: rgba(254, 202, 87, 0.1); border-radius: 8px;">
+                                        <h6 style="color: #feca57; margin-bottom: 8px;">📚 Additional Notes:</h6>
+                                        <div class="formatted-content">${formatAIResponse(vuln.ai_fix.additional_notes)}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+            
+            // Add formatted content styling
+            if (!document.getElementById('formatted-content-style')) {
+                const style = document.createElement('style');
+                style.id = 'formatted-content-style';
+                style.textContent = `
+                    .formatted-content h1, .formatted-content h2, .formatted-content h3 {
+                        color: #4ecdc4 !important;
+                        margin: 15px 0 10px 0;
+                    }
+                    .formatted-content strong { color: #feca57 !important; }
+                    .formatted-content code { 
+                        background: rgba(0, 0, 0, 0.4) !important; 
+                        color: #4ecdc4 !important; 
+                        padding: 2px 6px; 
+                        border-radius: 4px;
+                    }
+                    .formatted-content ul, .formatted-content ol { 
+                        margin: 10px 0; 
+                        padding-left: 20px; 
+                    }
+                    .formatted-content li { margin: 5px 0; }
+                    .formatted-content p { margin: 8px 0; line-height: 1.6; }
+                    .formatted-content blockquote {
+                        border-left: 4px solid #feca57;
+                        margin: 10px 0;
+                        padding: 10px 15px;
+                        background: rgba(254, 202, 87, 0.1);
+                        border-radius: 0 8px 8px 0;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            // Re-highlight syntax
+            if (window.Prism) {
+                Prism.highlightAll();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatMessages = document.getElementById('chatMessages');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            // Add user message with better formatting
+            const userMessageHTML = `
+                <div class="chat-message user">
+                    <div class="chat-header">
+                        <span class="chat-timestamp">${timestamp}</span>
+                        <strong>You</strong>
+                        <div class="chat-avatar user-avatar">👤</div>
+                    </div>
+                    <div class="chat-content">${escapeHtml(message)}</div>
+                </div>
+            `;
+            chatMessages.innerHTML += userMessageHTML;
+
+            // Clear input
+            input.value = '';
+
+            // Add loading message
+            const loadingId = 'loading-' + Date.now();
+            const loadingHTML = `
+                <div class="chat-message loading" id="${loadingId}">
+                    <div class="chat-header">
+                        <div class="chat-avatar agent-avatar">🤖</div>
+                        <strong>AI Security Agent</strong>
+                        <span class="chat-timestamp">${timestamp}</span>
+                    </div>
+                    <div class="chat-content">
+                        <div class="thinking-animation">
+                            <span>🧠 Thinking</span>
+                            <div class="thinking-dots">
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                                <div class="thinking-dot"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatMessages.innerHTML += loadingHTML;
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Get code context if available
+            const code = document.getElementById('codeInput').value;
+
+            try {
+                const response = await fetch('/ai/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        message,
+                        code_context: code.trim() ? code : null
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                
+                // Add agent response with beautiful formatting
+                const responseTime = new Date().toLocaleTimeString();
+                const formattedResponse = formatAIResponse(data.response);
+                
+                const agentMessageHTML = `
+                    <div class="chat-message agent">
+                        <div class="chat-header">
+                            <div class="chat-avatar agent-avatar">🤖</div>
+                            <strong>AI Security Agent</strong>
+                            <span class="chat-timestamp">${responseTime}</span>
+                        </div>
+                        <div class="chat-content">${formattedResponse}</div>
+                    </div>
+                `;
+                chatMessages.innerHTML += agentMessageHTML;
+                
+            } catch (error) {
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+                
+                const errorTime = new Date().toLocaleTimeString();
+                const errorHTML = `
+                    <div class="chat-message agent">
+                        <div class="chat-header">
+                            <div class="chat-avatar agent-avatar">⚠️</div>
+                            <strong>AI Security Agent</strong>
+                            <span class="chat-timestamp">${errorTime}</span>
+                        </div>
+                        <div class="chat-content">
+                            <p>🚨 <strong>Oops!</strong> I'm having trouble responding right now.</p>
+                            <p><strong>Error:</strong> <code>${error.message}</code></p>
+                            <p>Please try again in a moment or contact support if the issue persists.</p>
+                        </div>
+                    </div>
+                `;
+                chatMessages.innerHTML += errorHTML;
+            }
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatAIResponse(response) {
+            if (!response) return '<p>No response received.</p>';
+            
+            // Convert markdown-like formatting to HTML
+            let formatted = response
+                // Headers
+                .replace(/### (.*?)$/gm, '<h3>$1</h3>')
+                .replace(/## (.*?)$/gm, '<h2>$1</h2>')
+                .replace(/# (.*?)$/gm, '<h1>$1</h1>')
+                
+                // Bold text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                
+                // Code blocks
+                .replace(/```(\w+)?\n([\s\S]*?)\n```/g, '<pre><code class="language-$1">$2</code></pre>')
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                
+                // Inline code
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                
+                // Lists
+                .replace(/^\* (.*?)$/gm, '<li>$1</li>')
+                .replace(/^- (.*?)$/gm, '<li>$1</li>')
+                .replace(/^\d+\. (.*?)$/gm, '<li>$1</li>')
+                
+                // Blockquotes
+                .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
+                
+                // Line breaks
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>');
+            
+            // Wrap in paragraphs if not already wrapped
+            if (!formatted.startsWith('<') || formatted.includes('<br>')) {
+                formatted = '<p>' + formatted + '</p>';
+            }
+            
+            // Clean up list formatting
+            formatted = formatted
+                .replace(/(<li>.*?<\/li>)/gs, (match) => {
+                    const items = match.match(/<li>.*?<\/li>/g);
+                    return '<ul>' + items.join('') + '</ul>';
+                });
+            
+            // Add emoji support for common patterns
+            formatted = formatted
+                .replace(/\b(vulnerability|vulnerable|security)\b/gi, '🔒 $1')
+                .replace(/\b(fix|solution|secure)\b/gi, '🛠️ $1')
+                .replace(/\b(warning|danger|risk)\b/gi, '⚠️ $1')
+                .replace(/\b(example|demo)\b/gi, '💡 $1')
+                .replace(/\b(important|critical)\b/gi, '🚨 $1')
+                .replace(/\b(tip|hint|note)\b/gi, '💭 $1');
+            
+            return formatted;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = 
+                '<p style="text-align: center; color: #b8c6db; margin: 40px 0;">No analysis performed yet. Upload your Lua code to begin.</p>';
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('codeInput').value = '';
+        }
+
+        // Auto-analyze example code on page load
+        window.addEventListener('load', function() {
+            // Optionally auto-run AI analysis on the example
+            // aiAnalyzeCode();
+        });
+    </script>
+</body>
+</html>

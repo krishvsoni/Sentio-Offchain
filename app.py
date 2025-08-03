@@ -12,8 +12,12 @@
 
 from flask import Flask, render_template, request, jsonify
 from luaparser import ast, astnodes
+import luaparser
 from luaparser.astnodes import *
 from flask_cors import CORS
+from datetime import datetime
+from ai_agent import create_security_agent, create_chat_agent
+from learning_agent import create_learning_agent
 
 app = Flask(__name__)
 CORS(app)
@@ -715,10 +719,19 @@ def analyze_flash_loans(tree):
                 add_vulnerability(
                     "Flash Loan Risk",
                     "Unprotected balance check (flash loan attack possible).",
-                    "flash_loan",
                     "high",
                     get_line_number(node)
                 )
+
+
+def emits_event(node):
+    """Check if a function emits events for state changes."""
+    # Look for event emission patterns
+    for stmt in ast.walk(node):
+        if isinstance(stmt, astnodes.Call) and isinstance(stmt.func, astnodes.Name):
+            if stmt.func.id in ['emit', 'log', 'event']:
+                return True
+    return False
 
 
 def analyze_event_logging(tree):
@@ -770,26 +783,43 @@ def has_access_control(node):
 def analyze_lua_code(code):
     global vulnerabilities
     vulnerabilities = []
-    analyze_arithmetic(code)
-    analyze_flash_loans(code)
-    analyze_oracle_manipulation(code)
-    analyze_frontrunning(code)
-    analyze_tag_handling_security(code)
-    analyze_state_reset_misuse(code)
-    # analyze_replay_attacks(code)
-    analyze_improper_balance_checks(code)
-    analyze_reentrancy_in_handlers(code)
-    analyze_unhandled_errors_in_handlers(code)
-    analyze_access_control(code)
-    analyze_overflow_and_return(code)
-    analyze_underflow_and_return(code)
-    analyze_return(code)
-    check_private_key_exposure(code)
-    analyze_reentrancy(code)
-    analyze_floating_pragma(code)
-    analyze_denial_of_service(code)
-    analyze_unchecked_external_calls(code)
-    analyze_greedy_suicidal_functions(code)
+    
+    try:
+        tree = ast.parse(code)
+        
+        # Pass tree to functions that expect it
+        analyze_arithmetic(tree)
+        analyze_flash_loans(tree)
+        analyze_oracle_manipulation(tree)
+        analyze_frontrunning(tree)
+        analyze_event_logging(tree)
+        
+        # Pass code to functions that expect raw code
+        analyze_tag_handling_security(code)
+        analyze_state_reset_misuse(code)
+        analyze_replay_attacks(code)
+        analyze_improper_balance_checks(code)
+        analyze_reentrancy_in_handlers(code)
+        analyze_unhandled_errors_in_handlers(code)
+        analyze_access_control(code)
+        analyze_overflow_and_return(code)
+        analyze_underflow_and_return(code)
+        analyze_return(code)
+        check_private_key_exposure(code)
+        analyze_reentrancy(code)
+        analyze_floating_pragma(code)
+        analyze_denial_of_service(code)
+        analyze_unchecked_external_calls(code)
+        analyze_greedy_suicidal_functions(code)
+        
+    except Exception as e:
+        add_vulnerability(
+            "Parse Error",
+            f"Failed to parse Lua code: {str(e)}",
+            "parse_error",
+            "medium",
+            1
+        )
     
     return vulnerabilities
 
@@ -821,9 +851,171 @@ def analyze():
         "total_lines": total_lines,
         "vulnerable_lines": num_vulnerable_lines
     })
+
+# ============================================================================
+# AI AGENT ENDPOINTS
+# ============================================================================
+
+@app.route("/ai/analyze", methods=["POST"])
+def ai_analyze():
+    """Enhanced analysis with AI-powered insights and remediation suggestions"""
+    try:
+        code = request.json.get("code", "")
+        if not code:
+            return jsonify({"error": "No code provided"}), 400
+        
+        # Initialize AI agent
+        security_agent = create_security_agent()
+        
+        # Perform traditional vulnerability analysis
+        global vulnerabilities
+        vulnerabilities = []
+        traditional_vulns = analyze_lua_code(code)
+        total_lines, num_vulnerable_lines = get_code_and_vulnerable_lines(code, traditional_vulns)
+        
+        # Get AI-powered overall analysis
+        ai_analysis = security_agent.analyze_code_with_ai(code)
+        
+        # Generate fix suggestions for each vulnerability
+        enhanced_vulnerabilities = []
+        for vuln in traditional_vulns:
+            # Get code context around the vulnerability
+            code_lines = code.split('\n')
+            line_num = vuln.get('line', 1)
+            
+            # Extract context (5 lines before and after)
+            start_line = max(0, line_num - 6)
+            end_line = min(len(code_lines), line_num + 5)
+            context = '\n'.join(code_lines[start_line:end_line])
+            
+            # Generate AI fix suggestion
+            fix_suggestion = security_agent.generate_fix_suggestion(vuln, context, line_num)
+            
+            # Generate explanation
+            explanation = security_agent.explain_vulnerability(vuln, context)
+            
+            # Enhance vulnerability with AI insights
+            enhanced_vuln = {
+                **vuln,
+                "ai_fix": fix_suggestion,
+                "ai_explanation": explanation,
+                "code_context": context,
+                "context_lines": {
+                    "start": start_line + 1,
+                    "end": end_line
+                }
+            }
+            enhanced_vulnerabilities.append(enhanced_vuln)
+        
+        response = {
+            "vulnerabilities": enhanced_vulnerabilities,
+            "total_lines": total_lines,
+            "vulnerable_lines": num_vulnerable_lines,
+            "ai_analysis": ai_analysis,
+            "agent_version": "1.0.0",
+            "enhanced": True
+        }
+        
+        if not enhanced_vulnerabilities:
+            response["message"] = "No vulnerabilities found."
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({
+            "error": f"AI analysis failed: {str(e)}",
+            "fallback_message": "Please try the regular analysis endpoint"
+        }), 500
+
+@app.route("/ai/fix", methods=["POST"])
+def ai_fix_suggestion():
+    """Get AI-powered fix suggestions for specific vulnerability"""
+    try:
+        data = request.json
+        vulnerability = data.get("vulnerability", {})
+        code_context = data.get("code_context", "")
+        line_number = data.get("line_number")
+        
+        if not vulnerability or not code_context:
+            return jsonify({"error": "Missing vulnerability or code context"}), 400
+        
+        # Initialize AI agent
+        security_agent = create_security_agent()
+        
+        # Generate fix suggestion
+        fix_suggestion = security_agent.generate_fix_suggestion(
+            vulnerability, code_context, line_number
+        )
+        
+        return jsonify({
+            "fix_suggestion": fix_suggestion,
+            "vulnerability": vulnerability,
+            "timestamp": "2025-07-09"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Fix generation failed: {str(e)}"}), 500
+
+@app.route("/ai/explain", methods=["POST"])
+def ai_explain():
+    """Get detailed explanation of vulnerability"""
+    try:
+        data = request.json
+        vulnerability = data.get("vulnerability", {})
+        code_context = data.get("code_context", "")
+        
+        if not vulnerability or not code_context:
+            return jsonify({"error": "Missing vulnerability or code context"}), 400
+        
+        # Initialize AI agent
+        security_agent = create_security_agent()
+        
+        # Generate explanation
+        explanation = security_agent.explain_vulnerability(vulnerability, code_context)
+        
+        return jsonify({
+            "explanation": explanation,
+            "vulnerability": vulnerability,
+            "timestamp": "2025-07-09"
+        })
+        
+    except Exception as e:
+        return jsonify({"error": f"Explanation generation failed: {str(e)}"}), 500
+
+@app.route("/ai/chat", methods=["POST"])
+def ai_chat():
+    """Interactive chat with security expert AI"""
+    try:
+        data = request.json
+        message = data.get("message", "")
+        code_context = data.get("code_context")
+        
+        if not message:
+            return jsonify({"error": "No message provided"}), 400
+        
+        # Initialize chat agent
+        chat_agent = create_chat_agent()
+        
+        # Get response
+        response = chat_agent.chat(message, code_context)
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        return jsonify({"error": f"Chat failed: {str(e)}"}), 500
+
+# ============================================================================
+# END AI AGENT ENDPOINTS
+# ============================================================================
+
 @app.route('/')
 def home():
     return render_template('index.html')
+
+@app.route('/ai')
+def ai_agent():
+    """AI Agent enhanced interface"""
+    return render_template('ai_agent.html')
 
 @app.route("/analyzecells", methods=["POST"])
 def analyze_cells():
@@ -860,6 +1052,255 @@ def analyze_cells():
 def cells():
     return render_template("cells.html")
 
+
+# ============================================================================
+# LEARNING AGENT ENDPOINTS
+# ============================================================================
+
+@app.route("/learning/stats", methods=["GET"])
+def learning_stats():
+    """Get learning agent statistics"""
+    try:
+        learning_agent = create_learning_agent()
+        stats = learning_agent.get_learning_stats()
+        suggestions = learning_agent.suggest_improvements()
+        
+        return jsonify({
+            "stats": stats,
+            "suggestions": suggestions,
+            "timestamp": "2025-07-09"
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to get learning stats: {str(e)}"}), 500
+
+@app.route("/learning/feedback", methods=["POST"])
+def submit_feedback():
+    """Submit feedback for learning improvement"""
+    try:
+        data = request.json
+        vulnerability_id = data.get("vulnerability_id")
+        feedback = data.get("feedback")
+        is_correct = data.get("is_correct", True)
+        user_comment = data.get("user_comment")
+        
+        learning_agent = create_learning_agent()
+        learning_agent.record_feedback(vulnerability_id, feedback, is_correct, user_comment)
+        learning_agent.save_patterns()
+        
+        return jsonify({
+            "message": "Feedback recorded successfully",
+            "feedback_id": vulnerability_id
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to record feedback: {str(e)}"}), 500
+
+@app.route("/learning/train", methods=["POST"])
+def train_learning_agent():
+    """Train the learning agent with vulnerability data"""
+    try:
+        data = request.json
+        code_snippet = data.get("code_snippet", "")
+        vulnerability = data.get("vulnerability", {})
+        user_feedback = data.get("user_feedback")
+        
+        if not code_snippet or not vulnerability:
+            return jsonify({"error": "Missing code snippet or vulnerability data"}), 400
+        
+        learning_agent = create_learning_agent()
+        learned = learning_agent.learn_from_vulnerability(code_snippet, vulnerability, user_feedback)
+        learning_agent.save_patterns()
+        
+        return jsonify({
+            "learned": learned,
+            "message": "New pattern learned" if learned else "Pattern updated",
+            "total_patterns": len(learning_agent.patterns)
+        })
+    except Exception as e:
+        return jsonify({"error": f"Training failed: {str(e)}"}), 500
+
+@app.route("/learning/analyze", methods=["POST"])
+def learning_analyze():
+    """Enhanced analysis using learned patterns with auto-learning"""
+    try:
+        data = request.json
+        code = data.get("code", "")
+        enable_auto_learning = data.get("auto_learn", True)
+        
+        if not code:
+            return jsonify({"error": "No code provided"}), 400
+        
+        learning_agent = create_learning_agent()
+        
+        # Check against learned patterns first
+        learned_matches = learning_agent.check_against_learned_patterns(code)
+        
+        # Run traditional analysis for comparison and learning
+        global vulnerabilities
+        vulnerabilities = []
+        traditional_vulns = analyze_lua_code(code)
+        
+        # Auto-learn from analysis results
+        learning_summary = {}
+        if enable_auto_learning and traditional_vulns:
+            learning_summary = learning_agent.auto_learn_from_analysis(code, traditional_vulns)
+        
+        # Validate patterns periodically (every 50 patterns)
+        validation_report = {}
+        if len(learning_agent.patterns) % 50 == 0 and len(learning_agent.patterns) > 0:
+            validation_report = learning_agent.validate_patterns()
+        
+        # Get learning recommendations
+        recommendations = learning_agent.get_learning_recommendations()
+        
+        # Enhanced learning stats
+        learning_stats = learning_agent.get_learning_stats()
+        
+        learning_agent.save_patterns()
+        
+        response_data = {
+            "learned_patterns": learned_matches,
+            "traditional_vulnerabilities": traditional_vulns,
+            "learning_stats": learning_stats,
+            "auto_learning_summary": learning_summary,
+            "learning_recommendations": recommendations,
+            "analysis_metadata": {
+                "total_patterns_checked": len(learned_matches),
+                "traditional_vulns_found": len(traditional_vulns),
+                "code_length": len(code),
+                "auto_learning_enabled": enable_auto_learning,
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        # Include validation report if available
+        if validation_report:
+            response_data["validation_report"] = validation_report
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        return jsonify({"error": f"Enhanced learning analysis failed: {str(e)}"}), 500
+
+@app.route("/learning/export", methods=["GET"])
+def export_patterns():
+    """Export learned patterns"""
+    try:
+        learning_agent = create_learning_agent()
+        export_file = learning_agent.export_patterns()
+        
+        return jsonify({
+            "message": "Patterns exported successfully",
+            "export_file": export_file,
+            "total_patterns": len(learning_agent.patterns)
+        })
+    except Exception as e:
+        return jsonify({"error": f"Export failed: {str(e)}"}), 500
+
+@app.route("/learning/validate", methods=["POST"])
+def validate_learning_patterns():
+    """Validate and clean up learning patterns"""
+    try:
+        learning_agent = create_learning_agent()
+        validation_report = learning_agent.validate_patterns()
+        learning_agent.save_patterns()
+        
+        return jsonify({
+            "validation_report": validation_report,
+            "updated_stats": learning_agent.get_learning_stats()
+        })
+    except Exception as e:
+        return jsonify({"error": f"Pattern validation failed: {str(e)}"}), 500
+
+@app.route("/learning/recommendations", methods=["GET"])
+def get_learning_recommendations():
+    """Get learning recommendations for improving the AI agent"""
+    try:
+        learning_agent = create_learning_agent()
+        recommendations = learning_agent.get_learning_recommendations()
+        stats = learning_agent.get_learning_stats()
+        
+        return jsonify({
+            "recommendations": recommendations,
+            "learning_stats": stats,
+            "insights": stats.get("learning_insights", [])
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to get recommendations: {str(e)}"}), 500
+
+@app.route("/learning/dashboard", methods=["GET"])
+def learning_dashboard():
+    """Get comprehensive learning dashboard data"""
+    try:
+        learning_agent = create_learning_agent()
+        stats = learning_agent.get_learning_stats()
+        recommendations = learning_agent.get_learning_recommendations()
+        
+        # Calculate additional dashboard metrics
+        dashboard_data = {
+            "overview": {
+                "total_patterns": stats.get("total_patterns", 0),
+                "average_accuracy": round(stats.get("average_accuracy", 0), 3),
+                "average_confidence": round(stats.get("average_confidence", 0), 3),
+                "learning_health": "Excellent" if stats.get("average_accuracy", 0) > 0.8 else 
+                                 "Good" if stats.get("average_accuracy", 0) > 0.6 else 
+                                 "Needs Improvement"
+            },
+            "vulnerability_analysis": stats.get("vulnerability_analysis", {}),
+            "top_performers": stats.get("top_performing_patterns", []),
+            "learning_insights": stats.get("learning_insights", []),
+            "recommendations": recommendations,
+            "cache_performance": stats.get("cache_stats", {}),
+            "learning_metadata": stats.get("learning_metadata", {}),
+            "patterns_by_type": stats.get("patterns_by_type", {}),
+            "vulnerability_weights": stats.get("vulnerability_weights", {})
+        }
+        
+        return jsonify(dashboard_data)
+    except Exception as e:
+        return jsonify({"error": f"Dashboard data failed: {str(e)}"}), 500
+
+# Helper functions for vulnerability detection
+def has_slippage_control(node):
+    """Check if a swap/liquidity function has slippage protection."""
+    # Look for slippage-related parameters or conditions
+    if hasattr(node, 'args'):
+        for arg in node.args:
+            if isinstance(arg, astnodes.Name) and 'slippage' in arg.id.lower():
+                return True
+    return False
+
+def has_multiple_oracles(node):
+    """Check if oracle calls use multiple price feeds."""
+    # Look for multiple oracle sources or aggregation
+    if hasattr(node, 'args'):
+        oracle_count = 0
+        for arg in node.args:
+            if isinstance(arg, astnodes.Name) and 'oracle' in arg.id.lower():
+                oracle_count += 1
+        return oracle_count > 1
+    return False
+
+def is_balance_check(node):
+    """Check if a condition involves balance checking."""
+    if isinstance(node, astnodes.Call) and isinstance(node.func, astnodes.Name):
+        return node.func.id in ['balance', 'get_balance', 'balanceOf']
+    return False
+
+def has_reentrancy_guard(node):
+    """Check if a function has reentrancy protection."""
+    # Look for reentrancy guard patterns
+    current = node
+    while hasattr(current, '_parent'):
+        current = current._parent
+        if isinstance(current, astnodes.Function):
+            # Check for guard variables or modifiers
+            for stmt in ast.walk(current):
+                if isinstance(stmt, astnodes.LocalAssign):
+                    for target in stmt.targets:
+                        if isinstance(target, astnodes.Name) and 'guard' in target.id.lower():
+                            return True
+            break
+    return False
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
